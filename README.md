@@ -5,7 +5,7 @@ This tool is an updated version of the sleep annotation tool written by Franz We
 ## Basic Functionality
 
 This program allows users to view raw EEG & EMG signals and annotate each 2.5 second bin according to its state: Wake, NREM, REM.
-*add image*
+![alt text](https://github.com/parksu111/sleep-annotation/blob/main/img/gui.png)
 
 There are 8 rows, each displaying different information that can be used to help label the data:
 1. **Laser** - Indicates whether or not a laser was on for optogenetic stimulation of specific brain regions.
