@@ -385,7 +385,10 @@ class MainWindow(QtWidgets.QMainWindow):
 		
 		# scale image to seconds, minutes or hours        
 		self.image_spectrum.setImage(self.eeg_spec[0:self.ifreq,:].T)
-		self.image_spectrum.scale(self.fdt*scale, 1.0*self.fdx)
+		#self.image_spectrum.scale(self.fdt*scale, 1.0*self.fdx)
+		tr1 = QtGui.QTransform()
+		tr1.scale(self.fdt*scale, 1.0*self.fdx)
+		self.image_spectrum.setTransform(tr1)
 		
 		# mousescroll only allowed along x axis
 		self.graph_spectrum.vb.setMouseEnabled(x=True, y=False)
@@ -453,7 +456,10 @@ class MainWindow(QtWidgets.QMainWindow):
 		
 		# set image        
 		self.image_brainstate.setImage(self.M.T)
-		self.image_brainstate.scale(self.fdt*scale,1)
+		tr2 = QtGui.QTransform()
+		tr2.scale(self.fdt*scale,1)
+		self.image_brainstate.setTransform(tr2)
+		#self.image_brainstate.scale(self.fdt*scale,1)
 		self.graph_brainstate.vb.setMouseEnabled(x=True, y=False)
 		self.graph_brainstate.setXLink(self.graph_spectrum.vb)
 		limits = {'xMin': -1*self.fdt*scale, 'xMax': self.ftime[-1]*scale, 'yMin': 0, 'yMax': 1}
@@ -574,7 +580,10 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.graph_fft.addItem(self.image_fft)
 		# set image
 		self.image_fft.setImage(self.eeg_spec[0:self.ifreq,ii].T)
-		self.image_fft.scale(1, 1.0*self.fdx) 
+		tr3 = QtGui.QTransform()
+		tr3.scale(1,1.0*self.fdx)
+		self.image_fft.setTransform(tr3)
+		#self.image_fft.scale(1, 1.0*self.fdx) 
 		# set y-axis
 		ax = self.graph_fft.getAxis(name='left')
 		labelStyle = {'color': '#FFF', 'font-size': '12pt'}
