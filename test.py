@@ -303,7 +303,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		## set Range
 		self.graph_eeg.setRange(xRange=(t[0],t[-1]), padding=None)
 		## Plot EEG
-		self.graph_eeg.plot(t,self.EEG[ii]) 
+		self.graph_eeg.plot(t,self.EEG[ii])
 		## Label y-axis
 		ax = self.graph_eeg.getAxis(name='left')
 		labelStyle = {'color': '#FFF', 'font-size': '12pt'}
@@ -347,6 +347,10 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.graph_ann.setRange(yRange=(1, 3), xRange=(0,5), padding=None)
 		## plot
 		self.graph_ann.plot(np.arange(0,5)+0.5, self.M[0,ii], name = 'Ann', pen=(255,0,0), symbolPen='w')
+		self.graph_ann.addLine(x=1)
+		self.graph_ann.addLine(x=2)
+		self.graph_ann.addLine(x=3)
+		self.graph_ann.addLine(x=4)
 		## label y-axis
 		ax = self.graph_ann.getAxis(name='left')
 		labelStyle = {'color': '#FFF', 'font-size': '12pt'} 
