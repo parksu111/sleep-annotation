@@ -566,7 +566,7 @@ def power_spectrum(data, length, dt):
         Note that
             np.var(data) ~ np.sum(power density) * (frequencies[1]-frequencies[0])
     """
-    f, pxx = scipy.signal.welch(data, fs=1/dt, window='hanning', nperseg=int(length), noverlap=int(length/2))
+    f, pxx = scipy.signal.welch(data, fs=1/dt, window='hann', nperseg=int(length), noverlap=int(length/2))
     return pxx, f
 
 
