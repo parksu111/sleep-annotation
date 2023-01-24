@@ -694,8 +694,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		
 		# f - save file
 		if event.key() == 70:    
-			#rewrite_remidx(self.M, self.K, self.ppath, self.name, mode=0)
-			rewrite_remidx(self.M, self.K, self.remidx)
+			sleepy.write_remidx(self.M, self.K, self.ppath, self.name, mode=0)
 			self.plot_brainstate(self.tscale)
 			self.plot_eeg()
 			
