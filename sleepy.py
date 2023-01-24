@@ -1846,7 +1846,7 @@ def closest_precessor(seq, i):
     return id
 
 
-def write_remidx(M, K, ppath, name, mode=1) :
+def write_remidx(M, K, ppath, name, mode=0) :
     """
     rewrite_remidx(idx, states, ppath, name)
     replace the indices idx in the remidx file of recording name

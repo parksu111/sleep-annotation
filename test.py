@@ -354,7 +354,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 	def closeEvent(self, event):
 		print("Closing...")
-		sleepy.rewrite_remidx(self.M, self.K, self.ppath, self.name, mode=0)
+		sleepy.write_remidx(self.M, self.K, self.ppath, self.name, mode=0)
 		#sleepy.rewrite_remidx(self.M, self.K, self.remidx)
 		
 		
