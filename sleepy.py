@@ -128,6 +128,40 @@ def load_stateidx(ppath, name, ann_name=''):
             
     return M,K
 
+def load_stateprob(ppath, name):
+    """ load the sleep state file of recording ppath/name
+    @RETURN:
+    M     -      sequency of sleep states
+    """   
+    file = os.path.join(ppath, name, 'remprob_' + name + '.txt')
+    
+    f = open(file, newline=None)    
+    lines = f.readlines()
+    f.close()
+    
+    n = 0
+    for l in lines:
+        if re.match('\d', l):
+            n = n+1
+            
+    M = np.zeros(n)
+    K = np.zeros(n)
+    
+    i = 0
+    for l in lines :
+        
+        if re.search('^\s+$', l) :
+            continue
+        if re.search('\s*#', l) :
+            continue
+        
+        if re.match('\d+\s+-?\d+', l) :
+            a = re.split('\s+', l)
+            M[i] = int(a[0])
+            K[i] = int(a[1])
+            i += 1
+            
+    return M,K
 
 
 def load_recordings(ppath, rec_file) :
@@ -208,6 +242,51 @@ def load_dose_recordings(ppath, rec_file):
 
     return ctr_list, doses
     
+def get_cycles(ppath, name):
+    """
+    extract the time points where dark/light periods start and end
+    """
+    act_dur = get_infoparam(os.path.join(ppath, name, 'info.txt'), 'actual_duration')
+
+    time_param = get_infoparam(os.path.join(ppath, name, 'info.txt'), 'time')
+    if len(time_param) == 0 or len(act_dur) == 0:
+        return {'light': [(0,0)], 'dark': [(0,0)]}
+    
+    hour, mi, sec = [int(i) for i in re.split(':', time_param[0])]
+    #a = sleepy.get_infoparam(os.path.join(ppath, name, 'info.txt'), 'actual_duration')[0]
+    a,b,c = [int(i[0:-1]) for i in re.split(':', act_dur[0])]
+    total_dur = a*3600 + b*60 + c
+    
+    # number of light/dark switches
+    nswitch = int(np.floor(total_dur / (12*3600)))
+    switch_points = [0]
+    cycle = {'light': [], 'dark':[]}
+        
+    if hour >= 7 and hour < 19:
+        # recording starts during light cycle
+        a = 19*3600 - (hour*3600+mi*60+sec)
+        for j in range(nswitch):
+            switch_points.append(a+j*12*3600)
+        for j in range(1, nswitch, 2):
+            cycle['dark'].append(switch_points[j:j+2])
+        for j in range(0, nswitch, 2):
+            cycle['light'].append(switch_points[j:j+2])
+        
+    else:
+        # recording starts during dark cycle
+        a = 0
+        if hour < 24:
+            a = 24 - (hour*3600+mi*60+sec) + 7*3600
+        else:
+            a = 7*3600 - (hour*3600+mi*60+sec)
+        for j in range(nswitch):
+            switch_points.append(a+j*12*3600)
+        for j in range(0, nswitch, 2):
+            cycle['dark'].append(switch_points[j:j+2])
+        for j in range(1, nswitch, 2):
+            cycle['light'].append(switch_points[j:j+2])
+        
+    return cycle    
 
 
 def get_snr(ppath, name):
@@ -345,7 +424,17 @@ def laser_protocol(ppath, name):
         
     return d, np.mean(d), np.mean(np.array(freq))
 
-
+def load_trigger(ppath, name) :
+    """load sleep-state detection signal
+    recorded during closed loop stimulation
+    from ppath, name ...
+    @RETURN: @laser, sequency of 0's and 1's """
+    file = os.path.join(ppath, name, 'rem_trig_'+name+'.mat')
+    try:
+        triggered = np.array( h5py.File(file,'r').get('rem_trig') )
+    except:
+        triggered = so.loadmat(file)['rem_trig']
+    return np.squeeze(triggered)
 
 def swap_eeg(ppath, rec, ch='EEG'):
     """
@@ -1749,6 +1838,27 @@ def write_remidx(M, K, ppath, name, mode=1) :
     s = ["%d\t%d\n" % (i,j) for (i,j) in zip(M[0,:],K)]
     f.writelines(s)
     f.close()
+
+def rewrite_remidx(M, K, ppath, name):
+    """
+    rewrite_remidx(idx, states, ppath, name)
+    replace the indices idx in the remidx file of recording name
+    with the assignment given in states
+    """
+    outfile = os.path.join(ppath, name, 'remidx_' + name + '.txt')
+
+    f = open(outfile, 'w')
+    s = ["%d\t%d\n" % (i,j) for (i,j) in zip(M[0,:],K)]
+    f.writelines(s)
+    f.close()
+
+def rewrite_stateprob(M,K,ppath,name):
+    outfile = os.path.join(ppath, name, 'stateprob_'+name+'.txt')
+    f = open(outfile, 'w')
+    s = ["%d\t%d\n" % (i,j) for (i,j) in zip(M[0,:],K)]
+    f.writelines(s)
+    f.close()
+
 
 #######################################################################################
 
