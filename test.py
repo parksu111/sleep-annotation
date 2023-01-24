@@ -660,7 +660,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.eeg_spec = self.eeg_spec_list[self.eeg_pointer]
 				
 			self.plot_eeg()
-			#self.plot_treck(self.tscale)
+			self.plot_treck(self.tscale)
 			#self.plot_session(scale=self.tscale, scale_unit=self.tunit)
 			self.plot_spectrum(scale=self.tscale)
 			self.plot_emgampl(scale=self.tscale, scale_unit=self.tunit)
