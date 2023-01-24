@@ -3,6 +3,7 @@ import sys
 # pyqtgraph
 from PyQt5 import QtGui, QtCore, QtWidgets
 from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtCore import Qt
 import pyqtgraph as pg
 import numpy as np
 import scipy.io as so
@@ -564,6 +565,9 @@ class MainWindow(QtWidgets.QMainWindow):
 		# max color for spectrogram
 		self.color_max = np.max(self.eeg_spec)
 
+		# max color for high spectrogram
+		self.high_color_max = np.max(self.eeg_highspec)
+
 	def keyPressEvent(self, event):
 		#print(event.key())
 		# cursor to the right
@@ -579,7 +583,7 @@ class MainWindow(QtWidgets.QMainWindow):
 				self.index_list = [self.index]
 		
 		# cursor to the left
-		elif event.key() == 16777234:
+		if event.key() == 16777234:
 			if self.index >= 3:
 				self.index -= 1
 			self.K[self.index] = 1
@@ -591,7 +595,7 @@ class MainWindow(QtWidgets.QMainWindow):
 				self.index_list = [self.index]
 		
 		# r - REM
-		elif event.key() == 82:            
+		if event.key() == 82:            
 			self.M_old = self.M.copy()
 			self.M[0,self.index_range()] = 1
 			self.index_list = [self.index]
@@ -600,7 +604,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.plot_eeg()
 		
 		# w - Wake
-		elif event.key() == 87:
+		if event.key() == 87:
 			self.M_old = self.M.copy()
 			self.M[0,self.index_range()] = 2
 			self.index_list = [self.index]
@@ -609,7 +613,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.plot_brainstate(self.tscale)
 		
 		# s or n - SWS/NREM
-		elif event.key() == 78 or event.key() == 83:
+		if event.key() == 78 or event.key() == 83:
 			self.M_old = self.M.copy()
 			self.M[0,self.index_range()] = 3
 			self.index_list = [self.index]
@@ -618,13 +622,13 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.plot_brainstate(self.tscale)
 			
 		# z - revert back to previous annotation
-		elif event.key() == 90:
+		if event.key() == 90:
 			self.M = self.M_old.copy()
 			self.plot_eeg()
 			self.plot_brainstate(self.tscale)
 
 		# x - undefined state
-		elif event.key() == QtCore.Qt.Key_X:
+		if event.key() == QtCore.Qt.Key_X:
 			#self.M[0,self.index] = 0
 			self.M_old = self.M.copy()
 			self.M[0,self.index_range()] = 0
@@ -635,22 +639,30 @@ class MainWindow(QtWidgets.QMainWindow):
 			
 		# space: once space is pressed collect indices starting from space that 
 		# are visited with cursor
-		elif event.key() == 32:
+		if event.key() == 32:
 			self.pcollect_index = True
 			self.index_list = [self.index]
 		
 		# cursor down
-		elif event.key() == 16777237:
+		if event.key() == 16777237:
 			self.color_max -= self.color_max/10
-			self.image_spectrum.setLevels((0, self.color_max))
+			self.image_spectrum.setLevels((0, self.color_max))		
 		
 		# cursor up
-		elif event.key() == 16777235:
+		if event.key() == 16777235:
 			self.color_max += self.color_max/10
-			self.image_spectrum.setLevels((0, self.color_max))
-	   
+			self.image_spectrum.setLevels((0, self.color_max))		
+
+		if event.key() == QtCore.Qt.Key_Home:
+			self.high_color_max += self.high_color_max/10
+			self.image_high_spectrum.setLevels((0,self.high_color_max))
+
+		if event.key() == QtCore.Qt.Key_End:
+			self.high_color_max -= self.high_color_max/10
+			self.image_high_spectrum.setLevels((0,self.high_color_max))							
+
 		# 1 - seconds scale    
-		elif event.key() == 49:
+		if event.key() == 49:
 			self.tscale = 1.0 
 			self.tunit = 's'
 			#self.plot_session(scale=1, scale_unit='s')
@@ -660,7 +672,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.plot_treck(scale=1)
 			
 		# 2 - mintues scale
-		elif event.key() == 50:
+		if event.key() == 50:
 			self.tscale = 1/60.0 
 			self.tunit = 'min'
 			#self.plot_session(scale=1/60.0, scale_unit='min')
@@ -670,7 +682,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.plot_treck(scale=1/60.0)
 
 		# 3 - hours scale
-		elif event.key() == 51:
+		if event.key() == 51:
 			self.tscale = 1/3600.0 
 			self.tunit = 'h'
 
@@ -681,18 +693,18 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.plot_treck(scale=1/3600.0)        
 		
 		# f - save file
-		elif event.key() == 70:    
+		if event.key() == 70:    
 			#rewrite_remidx(self.M, self.K, self.ppath, self.name, mode=0)
 			rewrite_remidx(self.M, self.K, self.remidx)
 			self.plot_brainstate(self.tscale)
 			self.plot_eeg()
 			
 		# h - help
-		elif event.key() == 72:
+		if event.key() == 72:
 			self.print_help()
 			
 		# e - switch EEG channel
-		elif event.key() == 69:
+		if event.key() == 69:
 			self.lfp_pointer = -1
 			num_eeg = len(self.EEG_list)
 			if self.eeg_pointer < num_eeg-1:
@@ -710,7 +722,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.plot_emgampl(scale=self.tscale, scale_unit=self.tunit)
 	
 		# m - switch EMG channel
-		elif event.key() == 77:
+		if event.key() == 77:
 			num_emg = len(self.EMG_list)
 			if self.emg_pointer < num_emg-1:
 				self.emg_pointer += 1               
@@ -726,7 +738,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.plot_emgampl(scale=self.tscale, scale_unit=self.tunit)
 		
 		# p - switch on/off laser [p]ulses
-		elif event.key() == 80:
+		if event.key() == 80:
 			if self.pplot_laser==True:
 				self.pplot_laser = False
 			else:
@@ -735,7 +747,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.plot_treck(self.tscale)
 						
 		# l - turn on lfp channel
-		elif event.key() == 76:
+		if event.key() == 76:
 			self.eeg_pointer = -1
 			if len(self.LFP_list) > 0:                                
 				num_lfp = len(self.LFP_list)
@@ -746,11 +758,11 @@ class MainWindow(QtWidgets.QMainWindow):
 				self.EEG = self.LFP_list[self.lfp_pointer]
 				self.plot_eeg()
 
-		elif event.key() == QtCore.Qt.Key_I:
+		if event.key() == QtCore.Qt.Key_I:
 			self.print_info()
 
 		# $
-		elif event.key() == QtCore.Qt.Key_Dollar:
+		if event.key() == QtCore.Qt.Key_Dollar:
 			self.break_index[1] = len(self.K)-1
 			if not self.pbreak:
 				self.pbreak = True
@@ -760,7 +772,7 @@ class MainWindow(QtWidgets.QMainWindow):
 				self.plot_treck(scale=self.tscale)
 
 		# ^
-		elif event.key() == 94:
+		if event.key() == 94:
 			self.break_index[0] = 0
 			if not self.pbreak:
 				self.pbreak = True
@@ -770,7 +782,7 @@ class MainWindow(QtWidgets.QMainWindow):
 				self.plot_treck(scale=self.tscale)
 
 		# [ open break
-		elif event.key() == 91:
+		if event.key() == 91:
 			self.break_index[0] = int(self.index)
 			if not self.pbreak:
 				self.pbreak = True
@@ -780,7 +792,7 @@ class MainWindow(QtWidgets.QMainWindow):
 				self.plot_treck(scale=self.tscale)
 
 		# ]
-		elif event.key() == 93:
+		if event.key() == 93:
 			self.break_index[1] = int(self.index)
 			if not self.pbreak:
 				self.pbreak = True
@@ -790,7 +802,7 @@ class MainWindow(QtWidgets.QMainWindow):
 				self.plot_treck(scale=self.tscale)
 
 		# *
-		elif event.key() == 42:
+		if event.key() == 42:
 			use_idx = np.where(self.K>=0)[0]
 			print("Re-calculating sleep annotation")
 			sleepy.sleep_state(self.ppath, self.name, th_delta_std=1, mu_std=0, sf=1, sf_delta=3, pwrite=1,
