@@ -39,6 +39,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.show()
 		self.load_recording()
 		self.gen_layout()
+		self.plot_high_spectrum()
 		self.plot_spectrum()
 		self.plot_emgampl()
 		self.plot_brainstate()
@@ -67,7 +68,13 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.image_brainstate = pg.ImageItem()
 		self.graph_brainstate.addItem(self.image_brainstate)
 		
-		## Spetrogram
+		## High frequency Spectrogram
+		self.lay_brainstate.nextRow()
+		self.graph_high_spectrum = self.lay_brainstate.addPlot()
+		self.image_high_spectrum = pg.ImageItem()
+		self.graph_high_spectrum.addItem(self.image_high_spectrum)
+
+		## Spectrogram
 		self.lay_brainstate.nextRow()
 		self.graph_spectrum = self.lay_brainstate.addPlot()
 		self.image_spectrum = pg.ImageItem()
@@ -111,7 +118,38 @@ class MainWindow(QtWidgets.QMainWindow):
 		pos = np.array([0., 0.05, .2, .4, .6, .9])
 		color = np.array([[0, 0, 0, 255], [0,0,128,255], [0,255,0,255], [255,255,0, 255], (255,165,0,255), (255,0,0, 255)], dtype=np.ubyte)
 		cmap = pg.ColorMap(pos, color)
-		self.lut_spectrum = cmap.getLookupTable(0.0, 1.0, 256)		
+		self.lut_spectrum = cmap.getLookupTable(0.0, 1.0, 256)
+
+	def plot_high_spectrum(self, scale=1):
+		self.graph_high_spectrum.clear()
+		self.image_high_spectrum = pg.ImageItem()
+		self.graph_high_spectrum.addItem(self.image_high_spectrum)
+
+		self.image_high_spectrum.setImage(self.eeg_highspec[self.high_freq,:].T)
+
+		# Scale image to seconds/minutes/hours
+		tr = QtGui.QTransform()
+		tr.scale(self.fdt*scale, 1.0*self.fdx)
+		self.image_high_spectrum.setTransform(tr)
+
+		# Allow mouse-scroll along x axis
+		self.graph_high_spectrum.vb.setMouseEnabled(x=True, y=False)
+
+		# Limits
+		limits = {'xMin': -1*self.fdt*scale, 'xMax': self.ftime[-1]*scale, 'yMin': 0, 'yMax': self.freq[self.high_freq[-1]]}
+		self.graph_high_spectrum.vb.setLimits(**limits)
+
+		# Link graph with self.graph_brainstate
+		self.graph_high_spectrum.setXLink(self.graph_brainstate.vb)
+
+		# Label y-axis
+		ax = self.graph_high_spectrum.getAxis(name='left')
+		labelStyle = {'color': '#FFF', 'font-size': '12pt'}
+		ax.setLabel('Freq', units='Hz', **labelStyle)
+		ax.setTicks([[(0, '300'), (100, '400'), (200, '500')]])
+
+		# Set colormap
+		self.image_high_spectrum.setLookupTable(self.lut_spectrum)
 
 	def plot_spectrum(self, scale=1, scale_unit='s'):
 		# Clear plot and reload ImageItem
@@ -336,6 +374,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		if QMouseEvent.type() == QtCore.QEvent.MouseButtonDblClick:
 		
 			if self.graph_spectrum.sceneBoundingRect().contains(pos) \
+			or self.graph_high_spectrum.sceneBoundingRect().contains(pos) \
 			or self.graph_brainstate.sceneBoundingRect().contains(pos) \
 			or self.graph_treck.sceneBoundingRect().contains(pos) or self.graph_emgampl.sceneBoundingRect().contains(pos):
 				mousePoint = self.graph_spectrum.vb.mapSceneToView(pos)
@@ -423,6 +462,11 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.fdx = freq[1]-freq[0]
 		self.mfreq = np.where((freq>=10) & (freq <= 500))[0]
 		self.freq = freq #correct
+
+		# EEG spectrogram for MA detection
+		highspec = spec.copy()
+		self.eeg_highspec = highspec['SP']
+		self.high_freq = np.where((freq>=300)&(freq<=500))[0]
 		
 		self.emg_spec = so.loadmat(os.path.join(self.ppath, self.name, 'msp_' + self.name + '.mat'))
 		EMGAmpl1 = np.sqrt(self.emg_spec['mSP'][self.mfreq,:].sum(axis=0))
