@@ -209,8 +209,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		# Set colormap
 		self.image_brainstate.setLookupTable(self.lut_brainstate)
-		#self.image_brainstate.setLevels([1, 5])
-		self.image_brainstate.setLevels([0, 3])
+		self.image_brainstate.setLevels([0, 7])
 
 	def plot_treck(self, scale=1):
 		# Clear graph
