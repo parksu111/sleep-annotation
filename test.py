@@ -516,7 +516,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			
 		# load information of light/dark cycles
 		#self.dark_cycle = sleepy.get_cycles(self.ppath, self.name)['dark']
-		self.dark_cycle = [[1000,10000],[18000,20000]]
+		self.dark_cycle = sleepy.find_dark(self.ppath, self.name)
 				
 		# max color for spectrogram
 		self.color_max = np.max(self.eeg_spec)

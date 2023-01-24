@@ -43,6 +43,7 @@ DATE 5/1/19
 Upgraded to py3
 
 @author: Franz
+@updated by: Sungho Park
 """
 import scipy.signal
 import numpy as np
@@ -64,6 +65,8 @@ import seaborn as sns
 import pandas as pd
 from functools import reduce
 import pdb
+
+from datetime import datetime, timedelta
 
 
 
@@ -241,54 +244,76 @@ def load_dose_recordings(ppath, rec_file):
             ctr_list.append(a[1])
 
     return ctr_list, doses
-    
-def get_cycles(ppath, name):
-    """
-    extract the time points where dark/light periods start and end
-    """
+
+def get_pairs_light(original_list, end_time):
+    # check if the original list has an even number of elements
+    if len(original_list) % 2 == 0:
+        return [[original_list[i], original_list[i+1]] for i in range(0, len(original_list), 2)]
+    else:
+        # create a new list of pairs
+        pairs = [[original_list[i], original_list[i+1]] for i in range(0, len(original_list)-1, 2)]
+        # append the last element to the list
+        pairs.append([original_list[-1],end_time])
+        return pairs
+
+def get_pairs_dark(original_list, end_time):
+    if len(original_list)==0:
+        return [[0,end_time]]
+    else:
+        first = original_list[0]
+        remaining = original_list[1:]
+        pairs = get_pairs_light(remaining, end_time)
+        pairs.insert(0,[0,first])
+        return pairs    
+
+
+def find_dark(ppath, name):
     act_dur = get_infoparam(os.path.join(ppath, name, 'info.txt'), 'actual_duration')
 
     time_param = get_infoparam(os.path.join(ppath, name, 'info.txt'), 'time')
     if len(time_param) == 0 or len(act_dur) == 0:
-        return {'light': [(0,0)], 'dark': [(0,0)]}
-    
-    hour, mi, sec = [int(i) for i in re.split(':', time_param[0])]
-    #a = sleepy.get_infoparam(os.path.join(ppath, name, 'info.txt'), 'actual_duration')[0]
-    a,b,c = [int(i[0:-1]) for i in re.split(':', act_dur[0])]
-    total_dur = a*3600 + b*60 + c
-    
-    # number of light/dark switches
-    nswitch = int(np.floor(total_dur / (12*3600)))
-    switch_points = [0]
-    cycle = {'light': [], 'dark':[]}
-        
-    if hour >= 7 and hour < 19:
-        # recording starts during light cycle
-        a = 19*3600 - (hour*3600+mi*60+sec)
-        for j in range(nswitch):
-            switch_points.append(a+j*12*3600)
-        for j in range(1, nswitch, 2):
-            cycle['dark'].append(switch_points[j:j+2])
-        for j in range(0, nswitch, 2):
-            cycle['light'].append(switch_points[j:j+2])
-        
+        return []
+
+    # Change start time and duration to datetime format
+    start_time = time_param[0]
+    duration = act_dur[0]
+
+    rec_start_time = datetime.strptime(start_time, '%H:%M:%S')
+    rec_duration = timedelta(hours=int(duration.split('h')[0]), 
+                            minutes=int(duration.split('m')[0].split(':')[-1]), 
+                            seconds=int(duration.split('s')[0].split(':')[-1]))
+    rec_end_time = rec_start_time + rec_duration
+
+    # Find all 7ams/7pms in recording
+    start_hour = rec_start_time.hour
+    start_round = rec_start_time.replace(hour=start_hour+1, minute=0, second=0)
+    end_round = rec_end_time.replace(minute=0, second=0)
+
+    sevens = []
+
+    cur_time = start_round
+
+    while cur_time <= end_round:
+        if (cur_time.hour == 7) or (cur_time.hour==19):
+            sevens.append(cur_time)
+        cur_time = cur_time + timedelta(hours=1)
+
+    # Find seven a'clocks in seconds from start of recording
+    sevens_fromstart = [(x-rec_start_time).total_seconds() for x in sevens]
+
+    # define seven_am and seven_pm
+    seven_am = rec_start_time.replace(hour=7, minute=0, second=0)
+    seven_pm = rec_start_time.replace(hour=19, minute=0, second=0)    
+
+    # Return result based on when recording starts
+    endtime = rec_duration.total_seconds()
+    if (rec_start_time < seven_am) or (rec_start_time > seven_pm):
+        darks = get_pairs_dark(sevens_fromstart, endtime)
     else:
-        # recording starts during dark cycle
-        a = 0
-        if hour < 24:
-            a = 24 - (hour*3600+mi*60+sec) + 7*3600
-        else:
-            a = 7*3600 - (hour*3600+mi*60+sec)
-        for j in range(nswitch):
-            switch_points.append(a+j*12*3600)
-        for j in range(0, nswitch, 2):
-            cycle['dark'].append(switch_points[j:j+2])
-        for j in range(1, nswitch, 2):
-            cycle['light'].append(switch_points[j:j+2])
-        
-    return cycle    
+        darks = get_pairs_light(sevens_fromstart, endtime)
 
-
+    return darks
+    
 def get_snr(ppath, name):
     """
     read and return SR from file $ppath/$name/info.txt 
@@ -302,7 +327,6 @@ def get_snr(ppath, name):
         if a :
             values.append(a.group(1))            
     return float(values[0])
-
 
 
 def get_infoparam(ifile, field):
