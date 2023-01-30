@@ -278,6 +278,9 @@ class MainWindow(QtWidgets.QMainWindow):
 		# Link graph
 		self.graph_treck.setXLink(self.graph_spectrum.vb)
 
+		# Allow mouse-scroll along x-axis
+		self.graph_treck.vb.setMouseEnabled(x=True, y=False)		
+
 		# Label y-axis
 		ax = self.graph_treck.getAxis(name='left')
 		labelStyle = {'color': '#FFF', 'font-size': '12pt'}
@@ -346,7 +349,17 @@ class MainWindow(QtWidgets.QMainWindow):
 		## set range
 		self.graph_ann.setRange(yRange=(1, 3), xRange=(0,5), padding=None)
 		## plot
-		self.graph_ann.plot(np.arange(0,5)+0.5, self.M[0,ii], name = 'Ann', pen=(255,0,0), symbolPen='w')
+		self.plotM = []
+		for x in self.M[0,:]:
+			if x == 1:
+				self.plotM.append(3)
+			elif x == 2:
+				self.plotM.append(1)
+			else:
+				self.plotM.append(2)
+		self.plotM = np.array(self.plotM)
+		#self.graph_ann.plot(np.arange(0,5)+0.5, self.M[0,ii], name = 'Ann', pen=(255,0,0), symbolPen='w')
+		self.graph_ann.plot(np.arange(0,5)+0.5, self.plotM[ii], name='Ann', pen=(255,0,0), symbolPen='w')
 		self.graph_ann.addLine(x=1)
 		self.graph_ann.addLine(x=2)
 		self.graph_ann.addLine(x=3)
@@ -355,7 +368,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		ax = self.graph_ann.getAxis(name='left')
 		labelStyle = {'color': '#FFF', 'font-size': '12pt'} 
 		ax.setLabel('State', units='', **labelStyle)       
-		ax.setTicks([[(1, 'R'), (2, 'W'), (3, 'S')]])
+		ax.setTicks([[(1, 'W'), (2, 'N'), (3, 'R')]])
 		## label x-axis		
 		ax = self.graph_ann.getAxis(name='bottom')      
 		ax.setTicks([[]])
@@ -503,7 +516,6 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.fbin += 1
 
 		# load brain state
-		#if not(os.path.isfile(os.path.join(self.ppath, self.name, 'remidx_' + self.name + '.txt'))):
 		if not(os.path.isfile(os.path.join(self.ppath, self.name, 'remidx_' + self.name + '.txt'))):
 			# predict brain state
 			M,S = sleepy.sleep_state(self.ppath, self.name, pwrite=1, pplot=0)
@@ -551,7 +563,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		elif os.path.isfile(os.path.join(self.ppath, self.name, 'pull_' + self.name + '.mat')):
 			self.psuppl = True
 			self.suppl_treck = np.zeros((self.nbin,))
-			trig = load_pull(self.ppath, self.name)
+			trig = sleepy.load_pull(self.ppath, self.name)
 			(start_idx, end_idx) = sleepy.laser_start_end(trig)
 			if len(start_idx) > 0:
 				for (i, j) in zip(start_idx, end_idx):
@@ -633,7 +645,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
 		# x - undefined state
 		if event.key() == QtCore.Qt.Key_X:
-			#self.M[0,self.index] = 0
 			self.M_old = self.M.copy()
 			self.M[0,self.index_range()] = 0
 			self.index_list = [self.index]
