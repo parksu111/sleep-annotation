@@ -305,7 +305,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		# Label y-axis
 		ax = self.graph_brainstate.getAxis(name='left')
 		labelStyle = {'color': '#FFF', 'font-size': '12pt'}
-		ax.setLabel('State', units='', **labelStyle)
+		ax.setLabel('Brain State', units='', **labelStyle)
 		ax.setTicks([[(0, ''), (1, '')]])
 
 		# Label x-axis
