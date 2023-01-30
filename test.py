@@ -13,6 +13,21 @@ import h5py
 import sleepy
 import pdb
 
+def recheckIssue(M):
+	hasIssue = np.zeros(len(M[0,:]))
+	for idx,x in enumerate(M[0,:]):
+		if idx < len(M[0,:])-1:
+			cur = x
+			nxt = M[0,idx+1]
+			if (cur == 2)&(nxt == 1):
+				hasIssue[idx] = 1
+				hasIssue[idx+1] = 1
+			if (cur==1)&(nxt==3):
+				hasIssue[idx] = 1
+				hasIssue[idx+1] = 1
+	M2 = list(hasIssue)
+	return M2
+
 class MainWindow(QtWidgets.QMainWindow):
 	def __init__(self, ppath, name):
 		QtWidgets.QMainWindow.__init__(self)
@@ -62,6 +77,12 @@ class MainWindow(QtWidgets.QMainWindow):
 		## Treck: What is annotated, laswer, current time point
 		self.graph_treck = pg.PlotItem()
 		self.lay_brainstate.addItem(self.graph_treck)
+
+		## State Transition issue
+		self.lay_brainstate.nextRow()
+		self.graph_brainprob = self.lay_brainstate.addPlot()
+		self.image_brainprob = pg.ImageItem()
+		self.graph_brainprob.addItem(self.image_brainprob)
 
 		## Hypnogram (color-coded brainstate)
 		self.lay_brainstate.nextRow()
@@ -121,6 +142,12 @@ class MainWindow(QtWidgets.QMainWindow):
 		cmap = pg.ColorMap(pos, color)
 		self.lut_spectrum = cmap.getLookupTable(0.0, 1.0, 256)
 
+		#colormap for brainprob
+		color2 = np.array([[150, 150, 150, 200], [255, 0, 0,  200]], dtype=np.ubyte)
+		pos2 = np.linspace(0, 1, color2.shape[0])
+		cmap2 = pg.ColorMap(pos2, color2)
+		self.lut_brainprob = cmap2.getLookupTable(0, 1, color2.shape[0])		
+
 	def plot_high_spectrum(self, scale=1):
 		self.graph_high_spectrum.clear()
 		self.image_high_spectrum = pg.ImageItem()
@@ -146,7 +173,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		# Label y-axis
 		ax = self.graph_high_spectrum.getAxis(name='left')
 		labelStyle = {'color': '#FFF', 'font-size': '12pt'}
-		ax.setLabel('Freq', units='Hz', **labelStyle)
+		ax.setLabel('Freq (Hz)      ', units='', **labelStyle)
 		ax.setTicks([[(0, '300'), (100, '400'), (200, '500')]])
 
 		# Set colormap
@@ -179,7 +206,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		# Label y-axis
 		ax = self.graph_spectrum.getAxis(name='left')
 		labelStyle = {'color': '#FFF', 'font-size': '12pt'}
-		ax.setLabel('Freq', units='Hz', **labelStyle)
+		ax.setLabel('   ', units='', **labelStyle)
 		ax.setTicks([[(0, '0'), (10, '10'), (20, '20')]])
 
 		# Set colormap
@@ -213,6 +240,45 @@ class MainWindow(QtWidgets.QMainWindow):
 		ax.setLabel('Time', units=scale_unit, **labelStyle)
 
 	def plot_brainstate(self, scale=1):
+		## State transition issue
+		# Clear plot and reload Image Item
+		self.graph_brainprob.clear()
+		self.image_brainprob = pg.ImageItem()
+		self.graph_brainprob.addItem(self.image_brainprob)
+
+		# set image
+		self.image_brainprob.setImage(self.M2.T)
+		
+		# scale
+		tr2 = QtGui.QTransform()
+		tr2.scale(self.fdt*scale,1)
+		self.image_brainprob.setTransform(tr2)
+
+		# Allow mouse_scroll along x-axis
+		self.graph_brainprob.vb.setMouseEnabled(x=False, y=False)
+
+		# Link graph
+		self.graph_brainprob.setXLink(self.graph_spectrum.vb)
+
+		# Limits
+		limits = {'xMin': -1*self.fdt*scale, 'xMax': self.ftime[-1]*scale, 'yMin': 0, 'yMax': 1}
+		self.graph_brainstate.vb.setLimits(**limits)
+
+		# label y-axis
+		ax2 = self.graph_brainprob.getAxis(name='left')
+		labelStyle = {'color': '#FFF', 'font-size': '12pt'}
+		ax2.setLabel('Issue', units='', **labelStyle)
+		ax2.setTicks([[(0,''),(0.5,'')]])
+
+		# label x-axis
+		ax2 = self.graph_brainprob.getAxis(name='bottom')
+		ax2.setTicks([[]])
+
+		self.image_brainprob.setLookupTable(self.lut_brainprob)
+		self.image_brainprob.setLevels([0,1])
+
+
+		## Hypnogram
 		# Clear plot and reload ImageItem
 		self.graph_brainstate.clear()
 		self.image_brainstate = pg.ImageItem() 
@@ -239,7 +305,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		# Label y-axis
 		ax = self.graph_brainstate.getAxis(name='left')
 		labelStyle = {'color': '#FFF', 'font-size': '12pt'}
-		ax.setLabel('Brainstate', units='', **labelStyle)
+		ax.setLabel('State', units='', **labelStyle)
 		ax.setTicks([[(0, ''), (1, '')]])
 
 		# Label x-axis
@@ -394,6 +460,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			if self.graph_spectrum.sceneBoundingRect().contains(pos) \
 			or self.graph_high_spectrum.sceneBoundingRect().contains(pos) \
 			or self.graph_brainstate.sceneBoundingRect().contains(pos) \
+			or self.graph_brainprob.sceneBoundingRect().contains(pos) \
 			or self.graph_treck.sceneBoundingRect().contains(pos) or self.graph_emgampl.sceneBoundingRect().contains(pos):
 				mousePoint = self.graph_spectrum.vb.mapSceneToView(pos)
 				
@@ -412,7 +479,7 @@ class MainWindow(QtWidgets.QMainWindow):
 	def closeEvent(self, event):
 		print("Closing...")
 		sleepy.write_remidx(self.M, self.K, self.ppath, self.name, mode=0)
-		#sleepy.rewrite_remidx(self.M, self.K, self.remidx)
+		sleepy.rewrite_stateprob(self.M2, self.K2, self.ppath, self.name)
 		
 		
 	def openFileNameDialog(self):    
@@ -527,6 +594,13 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.M[0,:] = A[0:self.nbin]
 		# backup for brainstate in case somethin goes wrong
 		self.M_old = self.M.copy()
+
+		# load state transition issue
+		if not (os.path.isfile(os.path.join(self.ppath, self.name, 'stateprob_' + self.name + '.txt'))):
+			M2,S2 = sleepy.findIssue(self.ppath, self.name)
+		A2, self.K2 = sleepy.load_stateprob(self.ppath, self.name)
+		self.M2 = np.zeros((1,self.nbin))
+		self.M2[0,:] = A2
 				
 		# load laser
 		# laser signal in brainstate time
@@ -575,7 +649,6 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.laser_raw = np.zeros((len(self.EEG),), dtype='int8')
 			
 		# load information of light/dark cycles
-		#self.dark_cycle = sleepy.get_cycles(self.ppath, self.name)['dark']
 		self.dark_cycle = sleepy.find_dark(self.ppath, self.name)
 				
 		# max color for spectrogram
@@ -614,6 +687,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		if event.key() == 82:            
 			self.M_old = self.M.copy()
 			self.M[0,self.index_range()] = 1
+			self.M2[0,:] = recheckIssue(self.M)
 			self.index_list = [self.index]
 			self.pcollect_index = False
 			self.plot_brainstate(self.tscale)
@@ -623,6 +697,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		if event.key() == 87:
 			self.M_old = self.M.copy()
 			self.M[0,self.index_range()] = 2
+			self.M2[0,:] = recheckIssue(self.M)
 			self.index_list = [self.index]
 			self.pcollect_index = False
 			self.plot_eeg()
@@ -632,6 +707,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		if event.key() == 78 or event.key() == 83:
 			self.M_old = self.M.copy()
 			self.M[0,self.index_range()] = 3
+			self.M2[0,:] = recheckIssue(self.M)
 			self.index_list = [self.index]
 			self.pcollect_index = False
 			self.plot_eeg()
@@ -640,6 +716,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		# z - revert back to previous annotation
 		if event.key() == 90:
 			self.M = self.M_old.copy()
+			self.M2[0,:] = recheckIssue(self.M)
 			self.plot_eeg()
 			self.plot_brainstate(self.tscale)
 
@@ -647,6 +724,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		if event.key() == QtCore.Qt.Key_X:
 			self.M_old = self.M.copy()
 			self.M[0,self.index_range()] = 0
+			self.M2[0,:] = recheckIssue(self.M)
 			self.index_list = [self.index]
 			self.pcollect_index = False
 			self.plot_eeg()
@@ -710,6 +788,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		# f - save file
 		if event.key() == 70:    
 			sleepy.write_remidx(self.M, self.K, self.ppath, self.name, mode=0)
+			sleepy.rewrite_stateprob(self.M2, self.K2, self.ppath, self.name)
 			self.plot_brainstate(self.tscale)
 			self.plot_eeg()
 			
@@ -731,7 +810,6 @@ class MainWindow(QtWidgets.QMainWindow):
 				
 			self.plot_eeg()
 			self.plot_treck(self.tscale)
-			#self.plot_session(scale=self.tscale, scale_unit=self.tunit)
 			self.plot_spectrum(scale=self.tscale)
 			self.plot_emgampl(scale=self.tscale, scale_unit=self.tunit)
 	
@@ -746,8 +824,7 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.EMG = self.EMG_list[self.emg_pointer]
 			self.EMGAmpl = self.EMGAmpl_list[self.emg_pointer]
 
-			self.plot_eeg()
-			#self.plot_session(scale=self.tscale, scale_unit=self.tunit)        
+			self.plot_eeg()     
 			self.plot_spectrum(scale=self.tscale)
 			self.plot_emgampl(scale=self.tscale, scale_unit=self.tunit)
 		
@@ -832,13 +909,14 @@ class MainWindow(QtWidgets.QMainWindow):
 			self.M[0,:] = A[0:self.nbin]
 			# backup for brainstate in case somethin goes wrong
 			self.M_old = self.M.copy()
+			self.M2[0,:] = recheckIssue(self.M)
 			self.K[np.where(K_old<0)] = -1
 			self.plot_treck(scale=self.tscale)
 			#self.plot_session(scale=self.tscale, scale_unit=self.tunit)
 			self.plot_spectrum(scale=self.tscale)
 			self.plot_emgampl(scale=self.tscale, scale_unit=self.tunit)
 
-		event.accept()		
+		event.accept()
 
 # some input parameter management
 params = sys.argv[1:]

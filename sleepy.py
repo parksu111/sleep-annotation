@@ -136,7 +136,7 @@ def load_stateprob(ppath, name):
     @RETURN:
     M     -      sequency of sleep states
     """   
-    file = os.path.join(ppath, name, 'remprob_' + name + '.txt')
+    file = os.path.join(ppath, name, 'stateprob_' + name + '.txt')
     
     f = open(file, newline=None)    
     lines = f.readlines()
@@ -2279,6 +2279,26 @@ def sleep_state(ppath, name, th_delta_std=1, mu_std=0, sf=1, sf_delta=3, pwrite=
         plt.show()
     
     return M,S
+
+def findIssue(ppath, rec):
+    M,S = load_stateidx(ppath, rec)
+    hasIssue = np.zeros(len(M))
+    for idx,x in enumerate(M[0:len(M)-1]):
+        cur = x
+        nxt = M[idx+1]
+        if (cur == 2)&(nxt == 1):
+            hasIssue[idx] = 1
+            hasIssue[idx+1] = 1
+        if (cur==1)&(nxt==3):
+            hasIssue[idx] = 1
+            hasIssue[idx] = 1
+    M2 = list(hasIssue)
+    outfile = os.path.join(ppath, rec, 'stateprob_' + rec + '.txt')
+    f = open(outfile, 'w')    
+    s = ["%d\t%d\n" % (i,j) for (i,j) in zip(M,np.zeros((len(M2),)))] 
+    f.writelines(s)
+    f.close()
+    return M2, S
     
 
 def plot_hypnograms(ppath, recordings, tbin=0, unit='h', ma_thr=20, title='', tstart=0, tend=-1):
