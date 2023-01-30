@@ -350,7 +350,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		# Label y-axis
 		ax = self.graph_treck.getAxis(name='left')
 		labelStyle = {'color': '#FFF', 'font-size': '12pt'}
-		ax.setLabel('Laser', units='', **labelStyle)
+		ax.setLabel('Treck', units='', **labelStyle)
 		ax.setTicks([[(0, ''), (1, '')]])
 
 		# Label x-axis: remove ticks on x-axis
